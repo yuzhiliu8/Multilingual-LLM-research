@@ -9,15 +9,25 @@ def main():
 
     # *** CHANGE THESE VALUES ***
 
-    upload_path = 'raw-txt/en-sw.txt'         
-    language_abv = 'sw'
-    language = "Swahili"
+    upload_path = 'raw-txt/es-eu.txt'         
+    language_abv = 'eus'
     repo_id = 'yuzhiliu8/Multilingual-orig'
 
     # ***************************
 
+    df = ParaCrawl(upload_path)
+    
+
+    push_to_hf(
+        dataframe=df,
+        repo_id=repo_id,
+        language_abbreviation=language_abv
+    )
+        
+
+def ParaCrawl(upload_path):
     with open(upload_path, 'r+', encoding='utf-8') as file:
-        header_line = f'English\t{language}\n'
+        header_line = f'English\tText\n'
         content = file.readlines()
         original_length = len(content)
         if content[0] != header_line:   #adds language headers to txt file
@@ -27,28 +37,13 @@ def main():
                 file.write(line)
 
 
-    df = pd.read_csv(upload_path, delimiter="\t", encoding='utf-8', on_bad_lines='skip')
+    df = pd.read_csv(upload_path, delimiter="\t", encoding='utf-8', on_bad_lines='skip', engine="python")
+    df['English'] = ''
     print(df)
     print(f'LINES WITH ERRORS (SKIPPED) {original_length - len(df)}')
 
-    
-    push_to_hf(
-        dataframe=df,
-        repo_id=repo_id,
-        language_abbreviation=language_abv
-    )
-        
-
-def Handle_CSV():
-    upload_path = 'raw-txt/SWC-FRA.csv'         
-
-    df = pd.read_csv(upload_path, encoding='utf8')
-    df = df.rename(columns={"French":"English"})
-    null_row_indexes = df.loc[df['Swahili'].isna()].index
-    df = df.drop(null_row_indexes)
-    df['English'] = np.nan
-
-    print(df)
+    return df
+  
 
 
 def push_to_hf(dataframe, repo_id, language_abbreviation):
@@ -107,4 +102,5 @@ def push_to_hf(dataframe, repo_id, language_abbreviation):
 
 if __name__ == "__main__":
     main()
+
 
