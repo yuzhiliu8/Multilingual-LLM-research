@@ -1,21 +1,31 @@
-import sys
-import os
-from huggingface_hub import login
 from datasets import Dataset
 import pandas as pd
-import numpy as np
+import gzip
 
 def main():
 
     # *** CHANGE THESE VALUES ***
 
-    upload_path = 'raw-txt/es-eu.txt'         
-    language_abv = 'eus'
+    upload_path = 'raw-txt/bn.txt.xz'         
+    language_abv = 'bn'
     repo_id = 'yuzhiliu8/Multilingual-orig'
 
     # ***************************
 
-    df = ParaCrawl(upload_path)
+    # with open(upload_path, 'r+', encoding='utf-8') as file:
+    #     header_line = f'English\tText\n'
+    #     content = file.readlines()
+    #     original_length = len(content)
+    #     if content[0] != header_line:   #adds language headers to txt file
+    #         file.seek(0)
+    #         file.write(header_line)
+    #         for line in content:
+    #             file.write(line)
+
+
+    df = pd.read_csv(upload_path, compression='xz', encoding='utf-8', on_bad_lines='skip', engine="python", names=['Bengali'])
+    df['English'] = ''
+    print(df)
     
 
     push_to_hf(
@@ -25,24 +35,6 @@ def main():
     )
         
 
-def ParaCrawl(upload_path):
-    with open(upload_path, 'r+', encoding='utf-8') as file:
-        header_line = f'English\tText\n'
-        content = file.readlines()
-        original_length = len(content)
-        if content[0] != header_line:   #adds language headers to txt file
-            file.seek(0)
-            file.write(header_line)
-            for line in content:
-                file.write(line)
-
-
-    df = pd.read_csv(upload_path, delimiter="\t", encoding='utf-8', on_bad_lines='skip', engine="python")
-    df['English'] = ''
-    print(df)
-    print(f'LINES WITH ERRORS (SKIPPED) {original_length - len(df)}')
-
-    return df
   
 
 
