@@ -1,14 +1,27 @@
 from datasets import Dataset
 import pandas as pd
-import gzip
+from huggingface_hub import HfApi
+import os
+from dotenv import load_dotenv
 
 def main():
+
+    load_dotenv()
 
     # *** CHANGE THESE VALUES ***
 
     upload_path = 'raw-txt/bn.txt.xz'         
     language_abv = 'bn'
     repo_id = 'yuzhiliu8/Multilingual-orig'
+    token = os.getenv('HF_TOKEN')
+    print(token)
+
+    api = HfApi()
+
+    if "train" not in os.listdir():
+        os.mkdir("train")
+        os.mkdir("validation")
+        os.mkdir("test")
 
     # ***************************
 
@@ -24,8 +37,8 @@ def main():
 
     chunksize = 1000000
 
-
-    for chunk in pd.read_csv(upload_path, encoding='utf-8', on_bad_lines='skip', engine="python", header=None, names=['Text'], chunksize=chunksize):
+    chunk_number = 0
+    for chunk in pd.read_csv(upload_path, delimiter=".,.....,.,.,.,.,,,.,", encoding='utf-8', on_bad_lines='skip', engine="python", header=None, names=['Text'], chunksize=chunksize):
         df = chunk
         df['English'] = ''
         df = df[['English', 'Text']]
@@ -35,64 +48,94 @@ def main():
         push_to_hf(
             dataframe=df,
             repo_id=repo_id,
-            language_abbreviation=language_abv
+            language_abbreviation=language_abv,
+            ch_number=chunk_number,
+            api = api,
         )
+
+        chunk_number += 1
         
 
   
 
 
-def push_to_hf(dataframe, repo_id, language_abbreviation):
-    _in = input("Do you wish to upload this CSV to HuggingFace? \nPress Y to continue: ").lower()
-    if (_in == "y"):
-        train_val_split = int(len(dataframe) * 0.8)
-        val_test_split = int(len(dataframe) * 0.9)
+def push_to_hf(dataframe, repo_id, language_abbreviation, ch_number, api):
+    train_val_split = int(len(dataframe) * 0.8)
+    val_test_split = int(len(dataframe) * 0.9)
 
-        #Create Train, val, test splits
-        TRAIN = Dataset.from_pandas(dataframe[:train_val_split])
-        VALIDATION = Dataset.from_pandas(dataframe[train_val_split:val_test_split])
-        TEST = Dataset.from_pandas(dataframe[val_test_split:])
+    #Create Train, val, test splits
+    TRAIN = dataframe[:train_val_split]
+    VALIDATION = dataframe[train_val_split:val_test_split]
+    TEST = dataframe[val_test_split:]
 
-        #Create train, val, test directory paths
+    TRAIN_FILENAME = f'{language_abbreviation}_train-' + (5 - len(str(ch_number))) * "0" + str(ch_number) + ".parquet"
+    VALIDATION_FILENAME = f'{language_abbreviation}_validation-' + (5 - len(str(ch_number))) * "0" + str(ch_number) + ".parquet"
+    TEST_FILENAME = f'{language_abbreviation}_test-' + (5 - len(str(ch_number))) * "0" + str(ch_number) + ".parquet"
 
-        TRAIN_path = f"train/{language_abbreviation}/"
-        VALIDATION_path = f"validation/{language_abbreviation}/"
-        TEST_path = f"test/{language_abbreviation}/"
-        
-        
+    TRAIN_local_path = f'train/{TRAIN_FILENAME}'
+    VALIDATION_local_path = f'validation/{VALIDATION_FILENAME}'
+    TEST_local_path = f'test/{TEST_FILENAME}'
 
+    TRAIN.to_parquet(TRAIN_local_path)
+    VALIDATION.to_parquet(VALIDATION_local_path)
+    TEST.to_parquet(TEST_local_path)
+
+    TRAIN_repo_path = f"train/{language_abbreviation}/{TRAIN_FILENAME}"
+    VALIDATION_repo_path = f"validation/{language_abbreviation}/{VALIDATION_FILENAME}"
+    TEST_repo_path = f"test/{language_abbreviation}/{TEST_FILENAME}"
     
-        _in = input(f'''
-        INFORMATION:
-            REPO_ID: {repo_id}
-            LANGUAGE_ABBREVIATION: {language_abbreviation}
-            TRAIN dataset length: {len(TRAIN)}
-            VAL dataset length: {len(VALIDATION)}
-            TEST dataset length: {len(TEST)}
-            pushing TRAIN to path: {TRAIN_path}
-            pushing VALIDATION to path: {VALIDATION_path}
-            pushing TEST to path: {TEST_path}
 
-        if information is correct, press Y to continue: ''').lower()
-        if (_in ==  "y"):
-            TRAIN.push_to_hub(
-                repo_id=repo_id,
-                config_name="train",
-                split=f'{language_abbreviation}_train',
-                data_dir=TRAIN_path
-            )
-            VALIDATION.push_to_hub(
-                repo_id=repo_id,
-                config_name="validation",
-                split=f'{language_abbreviation}_validation',
-                data_dir=VALIDATION_path
-            )
-            TEST.push_to_hub(
-                repo_id=repo_id,
-                config_name="test",
-                split=f'{language_abbreviation}_test',
-                data_dir=TEST_path
-            )
+    print(f'''
+    INFORMATION:
+        REPO_ID: {repo_id}
+        LANGUAGE_ABBREVIATION: {language_abbreviation}
+        TRAIN dataset length: {len(TRAIN)}
+        VAL dataset length: {len(VALIDATION)}
+        TEST dataset length: {len(TEST)}
+        pushing TRAIN to path: {TRAIN_repo_path}
+        pushing VALIDATION to path: {VALIDATION_repo_path}
+        pushing TEST to path: {TEST_repo_path}
+''')
+    api.upload_file(
+        path_or_fileobj=TRAIN_local_path,
+        path_in_repo=TRAIN_repo_path,
+        repo_id=repo_id,
+        repo_type='dataset'
+        )
+    api.upload_file(
+        path_or_fileobj=VALIDATION_local_path,
+        path_in_repo=VALIDATION_repo_path,
+        repo_id=repo_id,
+        repo_type='dataset'
+        )
+    api.upload_file(
+        path_or_fileobj=TEST_local_path,
+        path_in_repo=TEST_repo_path,
+        repo_id=repo_id,
+        repo_type='dataset'
+        )
+    os.remove(TRAIN_local_path)
+    os.remove(VALIDATION_local_path)
+    os.remove(TEST_local_path)
+            # TRAIN.push_to_hub(
+            #     repo_id=repo_id,
+            #     config_name="train",
+            #     split=f'{language_abbreviation}_train',
+            #     data_dir=TRAIN_path
+            # )
+            # VALIDATION.push_to_hub(
+            #     repo_id=repo_id,
+            #     config_name="validation",
+            #     split=f'{language_abbreviation}_validation',
+            #     data_dir=VALIDATION_path
+            # )
+            # TEST.push_to_hub(
+            #     repo_id=repo_id,
+            #     config_name="test",
+            #     split=f'{language_abbreviation}_test',
+            #     data_dir=TEST_path
+            # )
+            
 
         
 
