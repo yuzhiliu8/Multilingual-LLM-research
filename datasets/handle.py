@@ -22,18 +22,21 @@ def main():
     #         for line in content:
     #             file.write(line)
 
+    chunksize = 1000000
 
-    df = pd.read_csv(upload_path, encoding='utf-8', on_bad_lines='skip', engine="python", Header=None, names=['Bengali'])
-    df['English'] = ''
-    df = df[['English', 'Bengali']]
-    print(df)
+
+    for chunk in pd.read_csv(upload_path, encoding='utf-8', on_bad_lines='skip', engine="python", header=None, names=['Text'], chunksize=chunksize):
+        df = chunk
+        df['English'] = ''
+        df = df[['English', 'Text']]
+        print(df)
     
 
-    push_to_hf(
-        dataframe=df,
-        repo_id=repo_id,
-        language_abbreviation=language_abv
-    )
+        push_to_hf(
+            dataframe=df,
+            repo_id=repo_id,
+            language_abbreviation=language_abv
+        )
         
 
   
