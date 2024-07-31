@@ -1,2 +1,6 @@
 /venv
 /datasets/Multilingual-orig
+/datasets/.env
+/datasets/test
+/datasets/train
+/datasets/validation
