@@ -35,7 +35,7 @@ def main():
     #         for line in content:
     #             file.write(line)
 
-    chunksize = 1000000
+    chunksize = 20000000
 
     chunk_number = 0
     for chunk in pd.read_csv(upload_path, delimiter=".,.....,.,.,.,.,,,.,", encoding='utf-8', on_bad_lines='skip', engine="python", header=None, names=['Text'], chunksize=chunksize):
