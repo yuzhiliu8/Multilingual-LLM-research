@@ -23,8 +23,9 @@ def main():
     #             file.write(line)
 
 
-    df = pd.read_csv(upload_path, compression='xz', encoding='utf-8', on_bad_lines='skip', engine="python", names=['Bengali'])
+    df = pd.read_csv(upload_path, encoding='utf-8', on_bad_lines='skip', engine="python", Header=None, names=['Bengali'])
     df['English'] = ''
+    df = df[['English', 'Bengali']]
     print(df)
     
 
