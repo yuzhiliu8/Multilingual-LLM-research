@@ -2,19 +2,14 @@ from datasets import Dataset
 import pandas as pd
 from huggingface_hub import HfApi
 import os
-from dotenv import load_dotenv
 
 def main():
 
-    load_dotenv()
-
     # *** CHANGE THESE VALUES ***
 
-    upload_path = 'raw-txt/bn.txt.xz'         
-    language_abv = 'bn'
+    upload_path = 'raw-txt/en-my.txt'         
+    language_abv = 'my'
     repo_id = 'yuzhiliu8/Multilingual-orig'
-    token = os.getenv('HF_TOKEN')
-    print(token)
 
     api = HfApi()
 
@@ -38,22 +33,17 @@ def main():
     chunksize = 20000000
 
     chunk_number = 0
-    for chunk in pd.read_csv(upload_path, delimiter=".,.....,.,.,.,.,,,.,", encoding='utf-8', on_bad_lines='skip', engine="python", header=None, names=['Text'], chunksize=chunksize):
-        df = chunk
-        df['English'] = ''
-        df = df[['English', 'Text']]
-        print(df)
+    df = pd.read_csv(upload_path, delimiter="\t", encoding='utf-8', on_bad_lines='skip', engine="python", header=None, names=['English', 'Text'])
+    print(df)
     
 
-        push_to_hf(
-            dataframe=df,
-            repo_id=repo_id,
-            language_abbreviation=language_abv,
-            ch_number=chunk_number,
-            api = api,
-        )
-
-        chunk_number += 1
+    push_to_hf(
+        dataframe=df,
+        repo_id=repo_id,
+        language_abbreviation=language_abv,
+        ch_number=chunk_number,
+        api = api,
+    )
         
 
   
